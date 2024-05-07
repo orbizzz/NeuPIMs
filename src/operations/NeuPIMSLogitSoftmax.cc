@@ -110,7 +110,6 @@ Tile NeuPIMSLogitSoftmax::initialize_instructions(int start, int end) {
                             query->get_addr(std::vector<uint32_t>{h_idx, seq_idx, dk_idx}));
                         dram_key_addrs.push_back(
                             key->get_addr(std::vector<uint32_t>{h_idx, dk_idx, seq_idx}));
-                        // todo: get all addrs 이거는 안되나 확인
                     }
                 }
                 auto sram_q_entry = allocate_sram_addr(seq_len * _dk, false);
@@ -168,8 +167,6 @@ Tile NeuPIMSLogitSoftmax::initialize_instructions(int start, int end) {
                 });
             }
 
-            // todo: pim operation 먼저.. 그 다음 npu load instruction 보내도록 순서 조정?
-
             continue;
         }
 
@@ -178,7 +175,7 @@ Tile NeuPIMSLogitSoftmax::initialize_instructions(int start, int end) {
         std::map<uint32_t, std::vector<addr_type>> sram_readres_addrs;
 
         uint32_t tiles_per_chunk =
-            key->get_allocated_seq_len() / banks_per_channel;  // comp-readres kernel 수
+            key->get_allocated_seq_len() / banks_per_channel;  // number of comp-readres kernel
 
         for (int chunk = 0; chunk < _chunks; chunk++) {
             // uint64_t make_address(channel, rank, bankgroup, bank, row, col);
@@ -307,13 +304,13 @@ void NeuPIMSLogitSoftmax::calculate_loops() {
     assert(sram_size_needed() < _config.spad_size KB / 2);
 
     uint32_t E = _config.model_n_embd / _config.n_tp;
-    // dram row 하나에 들어가는 parameter 수
+    // dram row capacity (unit: number of parameter)
     uint32_t page_size = _config.dram_page_size / _config.precision;
     uint32_t banks_per_channel = _config.dram_banks_per_ch;
     uint32_t datas_per_comp_cmd = _config.pim_comp_coverage;
 
-    _chunks = ceil((double)E / page_size);            // gwrite 수
-    _heads_per_tile = ceil((double)page_size / _dk);  // readres 수
+    _chunks = ceil((double)E / page_size);            // # of gwrite
+    _heads_per_tile = ceil((double)page_size / _dk);  // # of readres
     _heads_in_last_chunk =
         E % page_size == 0 ? _heads_per_tile : ceil((double)(E % page_size) / _dk);
     _comps_per_head = ceil((double)_dk / datas_per_comp_cmd);
@@ -328,11 +325,7 @@ uint32_t NeuPIMSLogitSoftmax::sram_size_needed() {
     // return sram_size_needed per head
     // initiation phase: li*dk*3 + 2li^2 + li*dk
     // incremental phase: 2*li + dk
-    // 어차피 kernel fusion 안하면 sequential하게 해도 되니까..
-    // request별로 끊으면 될듯..
-    // i ~ j request까지를 하나의 tile로
-    // 근데 이러면,.. baseline이 너무 불리한게 아닌가.. 싶긴하다.
-    //
+
     int sram_size = _config.spad_size KB / _config.precision;
 
     int dram_page_size = _config.dram_page_size / _config.precision;

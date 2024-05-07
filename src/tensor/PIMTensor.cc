@@ -17,13 +17,13 @@ PIMTensor::PIMTensor(std::string name, uint32_t ch, std::vector<uint32_t> dims,
     _num_ele_per_row = alloc->_num_ele_per_row;
     _E = Config::global_config.model_n_embd;
 
-    uint32_t num_alloc_iter = 0;  // seq_len에 따른 alloc iteration 횟수를 계산
+    uint32_t num_alloc_iter = 0;  // calculate # of allocation iterations based on seq_len.
     if (kv_type == PIMTensorKVType::KEY) {
-        // KEY는 E / C개의 row를 할당
+        // KEY: allocate (E / C) rows
         _num_rows_per_alloc = ceil((double)_E / (double)_num_ele_per_row);
         num_alloc_iter = ceil((double)_seq_len / (double)_bank_per_ch);
     } else {
-        // VALUE는 E / bank_per_ch개의 row를 할당
+        // VALUE: allocate (E / bank_per_ch) rows
         _num_rows_per_alloc = ceil((double)_E / (double)_bank_per_ch);
         num_alloc_iter = ceil((double)_seq_len / (double)_num_ele_per_row);
     }

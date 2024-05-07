@@ -97,7 +97,7 @@ void Core::issue(Tile &in_tile) {
     tile->spad_id = _current_spad;
     if (!tile->accum) {
         /* Accumeulate tile uses same acc spad buffer */
-        // K > 1이면 같은 acc_spad에 accumulate 한다.
+        // accumulate to same acc_spad if K > 1
         _current_acc_spad = (_current_acc_spad + 1) % 2;
         _acc_spad.flush(_current_acc_spad);
     }
@@ -210,37 +210,12 @@ bool Core::running() {
         running = running || !vector_pipeline.empty();
     }
 
-    // spdlog::info("Core::{} because {}", running ? "running" : "idle",
-    //              !_vector_pipeline.empty()
-    //                  ? "vector_pipeline"
-    //                  : (_waiting_write_reqs
-    //                         ? "waiting_write_reqs"
-    //                         : (!_ld_inst_queue.empty()
-    //                                ? "ld_inst_queue"
-    //                                : (!_ex_inst_queue.empty()
-    //                                       ? "ex_inst_queue"
-    //                                       : (!_st_inst_queue.empty()
-    //                                              ? "st_inst_queue"
-    //                                              : (_tiles.size() > 0 ? "tiles" : "???"))))));
-
     return running;
 }
 
 // push into target channel memory request queue
 void Core::push_memory_request(MemoryAccess *request) {
     int channel = AddressConfig::mask_channel(request->dram_address);
-
-    // if (ch != channel) {
-    //     spdlog::info("channel: {}, ch: {}", channel, ch);
-    //     assert(0);
-    // }
-
-    // if (channel == 0) {
-    //     std::string red = "\033[1;31m";
-    //     std::string reset = "\033[0m";
-    //     spdlog::info("{}Core push_mem_req(cid:{}) {}{}", red, channel,
-    //                  memAccessTypeString(request->req_type), reset);
-    // }
 
     _memory_request_queues[channel].push(request);
 }
@@ -265,16 +240,11 @@ void Core::push_memory_response(MemoryAccess *response) {
                response->req_type == MemoryAccessType::GWRITE ||
                response->req_type == MemoryAccessType::COMP) {
         // pim_header, pim_gwrite, pim_comp
-        // pim_header는 response가 오지 않음.
+        // pim_header request does not receive response
     } else if (response->spad_address >= ACCUM_SPAD_BASE) {
-        // spdlog::info("{} response to accum_spad, cycle:{}", is_read ? "LOAD" : "GEMV",
-        //              _core_cycle);  // >>> gsheo: remove it before commit
-
         // case2: load bias to _accum_spad
         _acc_spad.fill(response->spad_address, response->buffer_id);
     } else {
-        // spdlog::info("{} response to _spad, cycle:{}", is_read ? "LOAD" : "GEMV",
-        //              _core_cycle);  // >>> gsheo: remove it before commit
         // case3: load activation or weight to _spad
         _spad.fill(response->spad_address, response->buffer_id);
     }
@@ -287,7 +257,6 @@ bool Core::can_issue_compute(Instruction &inst) {
 
     // src addr: spad key
     for (addr_type addr : inst.src_addrs) {
-        // fused mha는 _acc_spad에서 check_hit을 해야하는데..
         if (inst.src_from_accum && addr >= ACCUM_SPAD_BASE) {
             result = result && _acc_spad.check_hit(addr, inst.accum_spad_id);
             continue;

@@ -93,7 +93,6 @@ void FusedMHA::initialize_tiles() {
     }
 }
 
-// 일단 한 tile에는 최대 하나의 request만 있는 경우부터.
 void FusedMHA::initialize_instructions(Tile &tile, int req_idx, int head_idx, int num_heads) {
     // req_idx in batch
     // head_idx # start idx
@@ -225,10 +224,9 @@ void FusedMHA::initialize_instructions(Tile &tile, int req_idx, int head_idx, in
 void FusedMHA::calculate_loops() {
     // todo: tiling!
     // different sequence length for each request in a batch...
-    // request마다 head attention을 몇개씩 batching할 것인지. 결정?
     /*
     for (req in batch)
-        q = _query[i] // [h, q, dk] #여기서 q는 seq_len이거나 1임
+        q = _query[i] // [h, q, dk] # for here, q = seq_len or 1
         k = _key[i] // [h, dk, seq_len]
         v = _value[i] // [h, seq_len, dk]
 
@@ -242,9 +240,6 @@ void FusedMHA::calculate_loops() {
         total size per head :
             2*q*dk + 2*dk*seq_len + seq_len*q
 
-        - [] 각 request마다 몇개의 head computation을 한 tile로 묶을 수 있는지 계산 ->
-    _heads_per_tile에 저장.
-        - [] initialize_instructions()에서 tile 하나 하나 계산.
     */
 
     for (int i = 0; i < _batch_size; i++) {

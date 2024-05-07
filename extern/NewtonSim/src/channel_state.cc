@@ -388,7 +388,7 @@ void ChannelState::UpdateState(const Command &cmd) {
         // <<< gsheo
     } else {
         bank_states_[cmd.Rank()][cmd.Bankgroup()][cmd.Bank()].UpdateState(cmd);
-        if (cmd.IsRefresh()) {  // gsheo: 일단 이 부분은 안불린다고 생각하자
+        if (cmd.IsRefresh()) {  
             BankNeedRefresh(cmd.Rank(), cmd.Bankgroup(), cmd.Bank(), false);
         }
     }
@@ -622,7 +622,6 @@ void ChannelState::UpdateTimingAndStates(const Command &cmd, uint64_t clk) {
     return;
 }
 
-// - [x] PIM G_ACT때마다 IsFAWReady() 확인 필요 (이 함수 고칠건 없을듯)
 bool ChannelState::ActivationWindowOk(int rank, uint64_t curr_time) const {
     bool tfaw_ok = IsFAWReady(rank, curr_time);
     if (config_.IsGDDR()) {

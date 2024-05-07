@@ -80,9 +80,6 @@ void DRAMController::ClockTick() {
         if (config_.enable_hbm_dual_cmd) {
             auto second_cmd = cmd_queue_.GetCommandToIssue();
             if (second_cmd.IsValid()) {
-                // gsheo todo:
-                // pim에서도 이 dual cmd 모드가 동작할 수 있는지 확인 필요
-                // -> 일단 pim일때 disable
                 // >>> gsheo
                 if (!cmd.IsPIMCommand() && !second_cmd.IsPIMCommand()) {
                     // <<< gsheo
@@ -255,7 +252,7 @@ void DRAMController::IssueCommand(const Command &cmd) {
 #endif  // CMD_TRACE
     assert(!cmd.IsReadRes());
     // if read/write, update pending queue and return queue
-    // gsheo: pim command 중에 READRES일 경우에만 pending queue에 넣어준다..
+    // in case of PIM commands, add only READRES to pending queue
     if (cmd.IsRead()) {  // >>> gsheo: isReadRes() 조건 추가
         auto num_reads = pending_rd_q_.count(cmd.hex_addr);
         if (num_reads == 0) {

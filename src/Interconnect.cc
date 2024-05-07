@@ -87,7 +87,8 @@ void SimpleInterconnect::cycle() {
                     uint32_t mem_ch = dest - _dram_offset;
                     MemoryAccess *mem_req = _in_buffers[src_node].front().access;
                     if (!_config.sub_batch_mode) {
-                        // newton일때는 batch가 1개이므로, 하나의 interconnect queue만 쓰도록.
+                        // When single buffer PIM (Newton), there is single batch,
+                        // so use one interconnect queue.
                         mem_req->stage_platform = StagePlatform::SA;
                     }
                     assert(mem_req->stage_platform == StagePlatform::SA ||
@@ -160,7 +161,7 @@ void SimpleInterconnect::pop(uint32_t nid) {
 
     _out_buffers[nid].pop();
 }
-// 아래 3개의 method는 Interconnect에서 Dram으로 Memory request를 보낼때 사용함.
+// below 3 method is used to send "Memory request" to "Dram" in "Interconnect"
 // - has_memreq
 // - memreq_top
 // - memreq_pop
@@ -186,82 +187,3 @@ void SimpleInterconnect::memreq_pop2(uint32_t cid) {
     assert(has_memreq2(cid));
     _mem_req_queue2[cid].pop();
 }
-
-// Booksim2Interconnect::Booksim2Interconnect(SimulationConfig config) {
-//     _config = config;
-//     _n_nodes = config.num_cores + config.dram_channels;
-//     spdlog::info("Initialize Booksim2");
-//     _config_path =
-//         fs::path(__FILE__).parent_path().append((std::string)config.icnt_config_path).string();
-//     spdlog::info("Config path : {}", _config_path);
-//     _booksim = std::make_unique<booksim2::Interconnect>(_config_path, _n_nodes);
-//     _ctrl_size = 8;
-// }
-
-// bool Booksim2Interconnect::running() { return false; }
-
-// void Booksim2Interconnect::cycle() { _booksim->run(); }
-
-// void Booksim2Interconnect::push(uint32_t src, uint32_t dest, MemoryAccess *request) {
-//     booksim2::Interconnect::Type type = get_booksim_type(request);
-//     uint32_t size = get_packet_size(request);
-//     _booksim->push(request, 0, 0, size, type, src, dest);
-// }
-
-// bool Booksim2Interconnect::is_full(uint32_t nid, MemoryAccess *request) {
-//     uint32_t size = get_packet_size(request);
-//     return _booksim->is_full(nid, 0, size);
-// }
-
-// bool Booksim2Interconnect::is_empty(uint32_t nid) { return _booksim->is_empty(nid, 0); }
-
-// MemoryAccess *Booksim2Interconnect::top(uint32_t nid) {
-//     assert(!is_empty(nid));
-//     return (MemoryAccess *)_booksim->top(nid, 0);
-// }
-
-// void Booksim2Interconnect::pop(uint32_t nid) {
-//     assert(!is_empty(nid));
-//     _booksim->pop(nid, 0);
-// }
-
-// void Booksim2Interconnect::print_stats() { _booksim->print_stats(); }
-
-// // gsheo: 일단은 booksim2 안쓰는걸로..
-// booksim2::Interconnect::Type Booksim2Interconnect::get_booksim_type(MemoryAccess *access) {
-//     booksim2::Interconnect::Type type;
-//     bool is_write = access->req_type == MemoryAccessType::WRITE;
-//     if (is_write && access->request) {
-//         /* Write request */
-//         type = booksim2::Interconnect::Type::WRITE;
-//     } else if (is_write && !access->request) {
-//         /* Write response */
-//         type = booksim2::Interconnect::Type::WRITE_REPLY;
-//     } else if (!is_write && access->request) {
-//         /* Read request */
-//         type = booksim2::Interconnect::Type::READ;
-//     } else if (!is_write && !access->request) {
-//         /* Read reply */
-//         type = booksim2::Interconnect::Type::READ_REPLY;
-//     }
-//     return type;
-// }
-
-// uint32_t Booksim2Interconnect::get_packet_size(MemoryAccess *access) {
-//     uint32_t size;
-//     bool is_write = access->req_type == MemoryAccessType::WRITE;
-//     if (is_write && access->request) {
-//         /* Write request */
-//         size = access->size;
-//     } else if (is_write && !access->request) {
-//         /* Write response */
-//         size = _ctrl_size;
-//     } else if (!is_write && access->request) {
-//         /* Read request */
-//         size = _ctrl_size;
-//     } else if (!is_write && !access->request) {
-//         /* Read reply */
-//         size = access->size;
-//     }
-//     return size;
-// }

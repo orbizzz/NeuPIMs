@@ -46,7 +46,7 @@ uint64_t Config::EncodePIMHeader(int channel, int row, bool for_gwrite, int num_
     int col_low_bits = LogBase2(BL);
     int actual_col_bits = LogBase2(columns) - col_low_bits;
 
-    // column bit를 4bits밖에 못써서.. shift_amount로 사용..
+    // we can have only 4 bits for column bit, so use as shift_amount
     int log_comps = (gwrite_bit << actual_col_bits) + LogBase2(num_comps);
     int log_readres = LogBase2(num_readres);
 

@@ -31,19 +31,16 @@ void KVCacheAlloc::init_npu_layout(addr_type base_addr) {
     uint32_t precision = Config::global_config.precision;
 
     _base_addr = base_addr;
-    _kv_cache_entry_size = 32;  // seq_len 32개 당 하나씩 할당하자.
+    _kv_cache_entry_size = 32;  // allocate once per seq_len 32
     _kv_cache_size = max_active_reqs * max_seq_len * h * d_k * precision;
     ast(_base_addr + _kv_cache_size < Config::global_config.HBM_size);
 
     addr_type next_addr = _base_addr;
-    // 저장 가능한 seq_len 수 / block 1개 당 seq_len (block은 32 * d_k elements)
-    // = HBM의 KV cache block의 수
+    // The number of sequence lengths that can be stored per block / sequence length per block
+    // (a block consists of 32 * d_k elements)
+    // = Number of KV cache blocks in HBM
     uint64_t num_kv_cache_entries = max_active_reqs * max_seq_len * h / _kv_cache_entry_size;
 
-    // 현재 NPUTensor가 최대 2차원까지의 inner_tensor를 지원하기 때문에
-    // [h, l, d_k]를 h개의 [l, d_k]로 나누어 할당한다. ??? 왜 h개의 dk를 l개? (l,h,dk)
-    // is using h,l,dk is acceptible in memory perspective?
-    //  연속적인 할당이 read bandwidth를 더 활용 잘할듯. okay
     for (int i = 0; i < num_kv_cache_entries; ++i) {
         _kv_cache.push_back(next_addr);
         next_addr += _kv_cache_entry_size * d_k * precision;  // 32 seq_len * d_k * precision
@@ -53,19 +50,19 @@ void KVCacheAlloc::init_npu_layout(addr_type base_addr) {
 void KVCacheAlloc::init_pim_layout(addr_type base_addr) {
     // =rows of matrix in a DRAM PIM row
     constexpr uint32_t row_per_bank = 32768;
-    // byte offset은 X  // rank bit, bg bit, bank bit, ch bit, col bit = 1 + 2 + 2 + 5 + 10
+    // byte offset X  // rank bit, bg bit, bank bit, ch bit, col bit = 1 + 2 + 2 + 5 + 10
     constexpr uint32_t row_offset = 20;
-    constexpr uint64_t mask = ~((1 << row_offset) - 1);     // 0x1111(64-21개)0000(21개)
+    constexpr uint64_t mask = ~((1 << row_offset) - 1);     // 0x1111(64-21)0000(21)
     _dram_row_size = Config::global_config.dram_page_size;  // 1024
     _num_ele_per_row = _dram_row_size / Config::global_config.precision;  // 512
     _bank_per_ch = Config::global_config.dram_banks_per_ch;
     _dram_channels = Config::global_config.dram_channels;
 
-    base_addr = base_addr & mask;  // 사용되고 있는 가장 마지막 row index를 추출
-    base_addr = base_addr + (1 << row_offset);  // 다음 row index로 이동
+    base_addr = base_addr & mask;  // get last row index using
+    base_addr = base_addr + (1 << row_offset);  // move to next row index
 
     _base_addr = base_addr;
-    _base_row = base_addr >> row_offset;  // row index만 추출
+    _base_row = base_addr >> row_offset;  // get only row index
 
     // _rows: channel -> row idx
     uint32_t free_rows_size = row_per_bank - _base_row;
@@ -77,8 +74,8 @@ void KVCacheAlloc::init_pim_layout(addr_type base_addr) {
     }
 }
 
-// [bank per ch, d_k]만큼의 공간을 할당해 return 한다.
-// 이걸 h번 반복하면 [h, bank per ch, d_k]만큼의 공간을 할당한 것이 된다.
+// allocate space [bank per ch, d_k], and return
+// when repeat this h times, we have allocated space [h, bank per ch, d_k]
 addr_type KVCacheAlloc::allocate() {
     ast(_mode == RunMode::NPU_ONLY);
     ast(_kv_cache.size() > 0);
@@ -92,7 +89,7 @@ addr_type KVCacheAlloc::allocate(uint64_t ch) {
     ast(_rows[ch]->size() > 0);
     addr_type row = _rows[ch]->front();
     _rows[ch]->pop_front();
-    return row;  // free row를 return.
+    return row;  // return free row 
 }
 
 void KVCacheAlloc::free(addr_type addr) {

@@ -3,8 +3,6 @@
 #include "../allocator/AddressAllocator.h"
 #include "spdlog/spdlog.h"
 
-// TODO: 꼭 NPUTensorInner() 불러서 dim inner, precision 초기화 시켜주자
-
 /**
  * NPUTensorKV
  *  allocate memory address with KVCacheAlloc.
@@ -19,8 +17,8 @@ NPUTensorKV::NPUTensorKV(std::vector<uint32_t> dims, NPUTensorKVType kv_type)
     _kv_cache_entry_size = alloc->_kv_cache_entry_size;
 
     // K: [h, d_k, n], V: [h, n, d_k]
-    // NPUTensorKV는 [d_k, n] or [n, d_k]의 shape을 가진다.
-    // NPUTensor가 NPUTensorKV를 h개 소유함.
+    // NPUTensorKV has shape of [d_k, n] or [n, d_k]
+    // NPUTensor has h NPUTensorKV
     _seq_len = kv_type == NPUTensorKVType::KEY ? dims[1] : dims[0];
     uint32_t num_required_alloc = ceil((double)_seq_len / (double)_kv_cache_entry_size);
     // spdlog::info("num_required_alloc: {}, seq_len: {}, kv_cache_entry_size: {}",
@@ -40,7 +38,6 @@ addr_type NPUTensorKV::get_addr(std::vector<uint32_t> indexes) {
     uint32_t byte_idx = _kv_type == NPUTensorKVType::KEY ? indexes[0] : indexes[1];
     uint32_t dk = _kv_type == NPUTensorKVType::KEY ? _dims[0] : _dims[1];
 
-    // [x]: idx 구하는 것 잘못된거 같음. _seq_len이 아니라 indexes의 seq_idx를 사용
     uint32_t idx = floor((double)seq_idx / (double)_kv_cache_entry_size);
     addr_type base_addr = _bases[idx];
     uint32_t offset = ((seq_idx % _kv_cache_entry_size) * dk + byte_idx) * _precision;
@@ -51,8 +48,8 @@ std::vector<addr_type> NPUTensorKV::get_all_addrs() {
     std::vector<addr_type> ret;
     uint32_t d_k = _kv_type == NPUTensorKVType::KEY ? _dims[0] : _dims[1];
 
-    uint32_t cnt = 0;  // (32, d_k)를 세기 위한 카운터.
-    uint32_t idx = 0;  // _bases에서 몇 번째 pointer를 사용할 것인지.
+    uint32_t cnt = 0;  // counter for (32, d_k)
+    uint32_t idx = 0;  // which pointer is used in _bases
     for (int i = 0; i < _seq_len * d_k; ++i) {
         // spdlog::info("i: {}, cnt: {}, idx: {}", i, cnt, idx);
         ret.push_back(_bases[idx] + cnt * _precision);

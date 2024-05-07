@@ -155,7 +155,7 @@ struct Command {
                cmd_type == CommandType::COMPS_READRES;
     }
     bool IsLastPIMCmd() const {
-        // COMP에 is_last_comps는 last command가 아님.
+        // `is_last_comps` in COMP does not mean last command
         return is_last_comps &&
                (cmd_type == CommandType::READRES || cmd_type == CommandType::COMPS_READRES);
     }
@@ -247,7 +247,7 @@ struct Command {
 };
 
 // >>> gsheo
-// ONNXim의 MemoryAccessType이랑 순서가 같아야함.
+// MUST be same order in MemoryAccessType of ONNXim (NPU-side simulator)
 enum class TransactionType {
     READ,
     WRITE,
@@ -318,8 +318,8 @@ struct Transaction {
 // ... (your header content)
 namespace LOGGING_CONFIG {
 extern bool STATUS_CHECK;
-extern uint32_t TROUBLE_ADDR;    // 해당 주소만 logging하기 위함
-extern uint32_t TROUBLE_CHANNEL; // 해당 채널만 logging하기 위함
+extern uint32_t TROUBLE_ADDR;    // for logging only specific addr
+extern uint32_t TROUBLE_CHANNEL; // for logging only specific channel
 extern bool PIMSIM_LOGGING;
 extern bool PIMSIM_LOGGING_DEBUG;
 extern bool LOGGING_ONLY_TROUBLE_ZONE;

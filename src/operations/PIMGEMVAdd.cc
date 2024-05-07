@@ -114,7 +114,7 @@ Tile PIMGEMVAdd::initialize_instructions() {
                     int num_readres_debug = 0;
 
                     uint32_t DRAM_row =
-                        value->_rows[ti * chunks + ci];  // chunks * ci + ti 아닌가??
+                        value->_rows[ti * chunks + ci];
                     p_header_addr =
                         AddressConfig::encode_pim_header(ch, DRAM_row, false, decoded_num_comps, 1);
                     // P_HEADER (num_comps, num_readres)
@@ -215,7 +215,7 @@ void PIMGEMVAdd::calculate_loops() {
 
     // memory spec
     _page_size =
-        _config.dram_page_size / _config.precision;  // dram row 하나에 들어가는 parameter 수
+        _config.dram_page_size / _config.precision;  // # of parameter in DRAM row
     _banks_per_channel = _config.dram_banks_per_ch;
 
     _tiles_per_chunk = ceil((double)_dk / _banks_per_channel);
@@ -223,7 +223,7 @@ void PIMGEMVAdd::calculate_loops() {
 }
 
 uint32_t PIMGEMVAdd::sram_size_needed() {
-    /// gemvadd activation을 위한 space = dk * batch_size?
+    /// space for gemvadd activation = dk * batch_size?
     uint32_t need_size = _batch_size * _config.model_n_head * _dk * _config.precision;
 
     return need_size;

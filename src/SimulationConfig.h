@@ -31,7 +31,7 @@ struct SimulationConfig {
     bool ch_load_balancing;
     bool kernel_fusion;
     uint32_t max_batch_size;
-    uint32_t max_active_reqs;  // scheduler의 ready_queue + running_queue의 최대 크기
+    uint32_t max_active_reqs;  // max size of (ready_queue + running_queue) in scheduler
     uint32_t max_seq_len;
     uint64_t HBM_size;          // HBM size in bytes
     uint64_t HBM_act_buf_size;  // HBM activation buffer size in bytes
@@ -78,7 +78,7 @@ struct SimulationConfig {
     std::string pim_config_path;
     uint32_t dram_page_size;  // DRAM row buffer size (in bytes)
     uint32_t dram_banks_per_ch;
-    uint32_t pim_comp_coverage;  // PIM COMP command당 처리하는 parameter 수
+    uint32_t pim_comp_coverage;  // # params per PIM_COMP command
 
     /* Log config */
     std::string operation_log_output_path;

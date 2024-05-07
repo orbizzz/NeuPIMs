@@ -32,8 +32,8 @@ std::vector<Ptr<BTensor>> SplitDecoding::get_outputs(std::vector<Ptr<BTensor>> i
     uint32_t E = Config::global_config.model_n_embd;
     uint32_t dk = Config::global_config.model_n_embd / Config::global_config.model_n_head;
 
-    // Split and concat breq->req->cacheload 받은 dram address를 기반으로 write operation 수행
-    // _inputs[1]->add_token();  // add_token을 여기서 하는게 맞나?
+    // Perform write operations based on the DRAM addresses received from split and concat breq->req->cacheload.
+    // _inputs[1]->add_token(); 
     // _inputs[2]->add_token();
 
     ast(input->get_dims().back() == 3 * E);

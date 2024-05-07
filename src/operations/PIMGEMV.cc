@@ -83,7 +83,7 @@ Tile PIMGEMV::initialize_instructions() {
         std::map<uint32_t, std::vector<addr_type>> sram_readres_addrs;
 
         uint32_t tiles_per_chunk =
-            key->get_allocated_seq_len() / banks_per_channel;  // comp-readres kernel 수
+            key->get_allocated_seq_len() / banks_per_channel;  // number of comp-readres kernel
 
         for (int chunk = 0; chunk < _chunks; chunk++) {
             // uint64_t make_address(channel, rank, bankgroup, bank, row, col);
@@ -214,8 +214,8 @@ void PIMGEMV::calculate_loops() {
     uint32_t banks_per_channel = _config.dram_banks_per_ch;
     uint32_t datas_per_comp_cmd = _config.pim_comp_coverage;
 
-    _chunks = ceil((double)E / page_size);            // gwrite 수
-    _heads_per_tile = ceil((double)page_size / _dk);  // readres 수
+    _chunks = ceil((double)E / page_size);            // # of gwrite
+    _heads_per_tile = ceil((double)page_size / _dk);  // # of readres
     _heads_in_last_chunk = ceil((double)(E % page_size) / _dk);
     // for debug
     spdlog::info("E: {}, page_size: {}, _dk: {}", E, page_size, _dk);

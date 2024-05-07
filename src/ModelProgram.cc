@@ -22,23 +22,11 @@ ModelProgram::ModelProgram(Ptr<Model> model, Ptr<BatchedRequest> batched_request
 void ModelProgram::init_program() {
     bool end_to_end = false;
 
-    // std::vector<uint32_t> input_dummy_dim{1};
-    // auto dummy_input =
-    //     std::make_shared<NPUTensor>("input", input_dummy_dim, NPUTensorBufType::ACT, true);
-    // std::vector<Ptr<BTensor>> inputs{dummy_input};
-
-    // auto microbench = add_op(std::make_shared<Microbench>(
-    //     name_gen("test", BlockType::Attention, OperationType::Microbench)));
-    // auto outputs = get_outputs(microbench, inputs);
-    // find_executable_node(dummy_input);
-    // return;
-
     /* end-to-end GPT program */
     if (end_to_end) {
         bool npu_program = Config::global_config.run_mode == RunMode::NPU_ONLY;
         bool fused = Config::global_config.kernel_fusion;
 
-        // -- this is sylee's test code (19 ~ 30)
         auto N = _breq->get_num_rows();
         auto E = Config::global_config.model_n_embd;
 
@@ -46,8 +34,6 @@ void ModelProgram::init_program() {
         auto input = std::make_shared<NPUTensor>("input", input_dim, NPUTensorBufType::ACT, true);
         std::vector<Ptr<BTensor>> inputs{input};
         for (uint32_t layer_idx = 0; layer_idx < Config::global_config.model_n_layer; ++layer_idx) {
-            // auto attention = add_op(std::make_shared<Attention>("hello", _breq));
-            // inputs = get_outputs(attention, inputs);
             if (npu_program) {
                 if (fused)
                     inputs = fused_attn_block(layer_idx, inputs);
@@ -66,7 +52,7 @@ void ModelProgram::init_program() {
 
     /* only Multi-head attention layer */
     else {
-        // Q, K, V는 전부 다 batching 해서 사용
+        // all Q, K, V are batched
 
         spdlog::info(">>> Initialize Model Program <<<");
         Ptr<NPUTensor> query;

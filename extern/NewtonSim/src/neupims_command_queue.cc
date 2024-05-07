@@ -51,7 +51,7 @@ void NeuPIMSCommandQueue::PrintAllQueue() const {
     PrintDebug("cmd_q_sizes:", cmd_q_sizes, "pim_q_size:", pim_queue_.size());
 }
 
-// controller:ClockTick()에서 호출
+// called by controller:ClockTick()
 Command NeuPIMSCommandQueue::GetCommandToIssue(std::pair<int, int> refresh_slack) {
     if (!skip_pim_) {
         if (!pim_queue_.empty() && !is_in_ref_) {
@@ -272,8 +272,8 @@ void NeuPIMSCommandQueue::PrintQueue(CMDQueue &queue) const {
 
 Command NeuPIMSCommandQueue::GetReadyInPIMQueue(std::pair<int, int> refresh_slack) {
     // estimation = channel_state_.EstimatePIMOperationLatency
-    // pim_mode일때는 pim command만 실행해야함.
-    // pim header는 반환하지 않고 erase하고, 다음 pim_cmd를 반환. & pim_mode on
+    // when pim_mode, execute only pim command 
+    // in case of pim header, erase without return, return next pim_cmd & pim_mode on
 
     for (auto cmd_it = pim_queue_.begin(); cmd_it != pim_queue_.end(); cmd_it++) {
         if (is_gwriting_) {
@@ -282,7 +282,7 @@ Command NeuPIMSCommandQueue::GetReadyInPIMQueue(std::pair<int, int> refresh_slac
                 Command ready_cmd = channel_state_.GetReadyCommand(*cmd_it, clk_);
                 return ready_cmd;
             } else {
-                // gwrite가 끝나길 기다려야함.
+                // should wait for gwrite complete
                 return Command();
             }
         } else if (cmd_it->IsGwrite()) {
@@ -318,8 +318,6 @@ Command NeuPIMSCommandQueue::GetReadyInPIMQueue(std::pair<int, int> refresh_slac
 
                 return cmd;
             } else {
-                // todo: refresh 이전에는 pim_queue를 visit하지 않도록 mark
-                // todo: refresh 한후에 다시 reset
                 if (channel_id_ == 4)
                     PrintWarning("cid:", channel_id_, "skip_pim ON", "gemv//");
                 skip_pim_ = true;
@@ -338,7 +336,7 @@ Command NeuPIMSCommandQueue::GetReadyInPIMQueue(std::pair<int, int> refresh_slac
 Command NeuPIMSCommandQueue::GetFirstReadyInQueue(CMDQueue &queue,
                                                   std::pair<int, int> refresh_slack) {
     // estimation = channel_state_.EstimatePIMOperationLatency
-    // pim header는 반환하지 않고 erase하고, 다음 pim_cmd를 반환. & pim_mode on
+    // in case of pim header, erase without return, return next pim_cmd & pim_mode on
 
     for (auto cmd_it = queue.begin(); cmd_it != queue.end(); cmd_it++) {
         if (reserved_row_for_pim_ == cmd_it->Row()) {
@@ -452,9 +450,9 @@ int NeuPIMSCommandQueue::QueueUsage() const {
 }
 
 // gsheo: Read after write dependency check
-// PIM command들이 다 메모리 입장에서 read하는 command이기 때문에,
-// 같은 address에 대해 pim command 전에 write가 일어나면 안됨.
-// -> pim command도 isRead = true로 설정
+// since PIM commands are like read commands from the memory's perspective,
+// no write operations should occur at the same address before a PIM command is executed.
+// -> set isRead = true for pim command
 bool NeuPIMSCommandQueue::HasRWDependency(const CMDIterator &cmd_it, const CMDQueue &queue) const {
     // Read after write has been checked in controller so we only
     // check write after read here

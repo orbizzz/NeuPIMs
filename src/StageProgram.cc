@@ -282,19 +282,7 @@ std::vector<Ptr<BTensor>> StageProgram::ffn1_block(std::vector<Ptr<BTensor>> inp
     return inputs;
 }
 std::vector<Ptr<BTensor>> StageProgram::ffn2_block(std::vector<Ptr<BTensor>> inputs) {
-    // TODO: residual connection... 일단은 ffn1_block에 ffn2도 포함
-    // int layer = 0;
-    // auto res_buf = inputs[0];
-    // std::string prefix = name_gen(LAYER(layer), BlockType::FeedForward);
-
-    // auto fc2 = add_op(std::make_shared<MatMul>(
-    //     name_gen(prefix, OperationType::FullyConnected2),
-    //     _model->get_params(layer, BlockType::FeedForward, OperationType::FullyConnected2)));
-    // inputs = get_outputs(fc2, inputs);
-
-    // auto residual = add_op(std::make_shared<Add>(name_gen(prefix, OperationType::Residual)));
-    // inputs.push_back(res_buf);
-    // inputs = get_outputs(residual, inputs);
+    // ffn1_block includes ffn2
     return inputs;
 }
 

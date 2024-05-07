@@ -48,10 +48,10 @@ addr_type Tensor::calculate_dram_address(std::vector<uint32_t> indexes) {
     return _address + relative_address;
 }
 
-// index를 받아, 해당 index 아래 있는 모든 element에 대한 dram address를 return.
-// ex: [2,4,6] dim의 tensor의 [1,3] index를 요청
-// [1, 3, 0], [1, 3, 1], [1, 3, 2], [1, 3, 3], [1, 3, 4], [1, 3, 5]에 대한
-// dram addr를 return (6개 * precision bytes)
+// given index, return all elements' dram address 
+// example: Request indices [1,3] from a tensor of dimension [2,4,6]
+// Return the DRAM addresses for [1, 3, 0], [1, 3, 1], [1, 3, 2], [1, 3, 3], [1, 3, 4], [1, 3, 5]
+// (6 elements * precision bytes)
 std::set<addr_type> Tensor::calculate_dram_addresses(std::vector<uint32_t> indexes) {
     // iterate thru size and precisions
     auto base_addr = _address + calculate_relative_address(indexes);
@@ -67,9 +67,9 @@ std::set<addr_type> Tensor::calculate_dram_addresses(std::vector<uint32_t> index
     return ret;
 }
 
-// Tensor의 dim을 operand dim과 batch dim 으로
-// 나누어서, batch dim의 index를 계산한다.
-// (여기서 batch는 request의 batch size와 다르다)
+// Split the tensor dimensions into operand dimensions and batch dimensions,
+// and compute the indices for the batch dimensions.
+// (Note that this 'batch' is different from the request's batch size)
 // ex: [2, 12, 1, 64] = [batch_size, num_head, seq_len, d_k]
 // calculate_batch_indexes(2, 2) => [0, 2]
 // 0 => [0, 0]
@@ -77,7 +77,7 @@ std::set<addr_type> Tensor::calculate_dram_addresses(std::vector<uint32_t> index
 // 2 => [0, 2]
 // 3 => [0, 3]
 // 12 => [1, 0]
-// batch_index를 (_dim.size() - emb_dim_size) 차원의 n-dim index로 변환해준다.
+// Converts the batch index into an n-dimensional index with dimensions (_dim.size() - emb_dim_size).
 std::vector<uint32_t> Tensor::calculate_batch_indexes(uint32_t batch_index, size_t emb_dim_size) {
     if (_dims.size() == emb_dim_size) {
         return {};
@@ -102,17 +102,17 @@ std::vector<uint32_t> Tensor::calculate_batch_indexes(uint32_t batch_index, size
     return indexes;
 }
 
-// Tensor의 dim을 operand dim과 batch dim 으로 나누고,
-// operand 영역의 dram addr를 생성해 return 한다.
+// Split the tensor's dimensions into operand dimensions and batch dimensions,
+// and return the DRAM addresses for the operand area.
 // ex: [2, 12, 1, 64], calculate_batch_addresses(12, 2)
-// => [1, 0, x, x]에 해당하는 dram address를 전부 return 한다.
+// Return all DRAM addresses corresponding to [1, 0, x, x].
 std::set<addr_type> Tensor::calculate_batch_addresses(uint32_t batch_index, size_t emb_dim_size) {
     return calculate_dram_addresses(calculate_batch_indexes(batch_index, emb_dim_size));
 }
 
 // size is relative address.
-// ex: [1,2,3] dim의 tensor의 [1,2] index를 요청
-// tensor base addr + (1*3 + 2)를 return 한다.
+// example: Request index [1,2] from a tensor of dimension [1,2,3]
+// Return tensor base addr + (1*3 + 2)
 // tensor [] operator.
 addr_type Tensor::calculate_relative_address(std::vector<uint32_t> indexes) {
     assert(indexes.size() <= _dims.size());
@@ -126,8 +126,9 @@ addr_type Tensor::calculate_relative_address(std::vector<uint32_t> indexes) {
     size *= _precision;
 
     if (size >= _size) {
-        // MatMul에서 tile instruction addr 만들 때 GARBAGE_ADDR이면 예외 처리
-        // 하므로, 여기서 에러 발생시키지 않는다.
+        // In MatMul, when generating tile instruction addresses, 
+        // if it's a GARBAGE_ADDR, handle the exception.
+        // Therefore, do not generate an error here.
         // spdlog::info("index out of range {} {}, {} {}", indexes, _dims, size,
         //  _size);
         // print_backtrace();

@@ -12,7 +12,7 @@ CommandQueue::CommandQueue(int channel_id, const Config &config, const ChannelSt
       queue_size_(static_cast<size_t>(config_.cmd_queue_size)),
       queue_idx_(0),
       clk_(0) {
-    // config.ini에서 hbm은 PER_BANK 씀
+
     if (config_.queue_structure == "PER_BANK") {
         queue_structure_ = QueueStructure::PER_BANK;
         num_queues_ = config_.banks * config_.ranks;
@@ -32,7 +32,7 @@ CommandQueue::CommandQueue(int channel_id, const Config &config, const ChannelSt
     }
 }
 
-// controller:ClockTick()에서 호출
+// called from controller:ClockTick()
 Command CommandQueue::GetCommandToIssue() {
     for (int i = 0; i < num_queues_; i++) {
         auto &queue = GetNextQueue();
@@ -45,8 +45,6 @@ Command CommandQueue::GetCommandToIssue() {
         auto cmd = GetFirstReadyInQueue(queue);
         if (cmd.IsValid()) {
             if (cmd.IsReadWrite()) {
-                // 단순히 Issue할 cmd를 queue에서 삭제하는 거면
-                // Newton command도 삭제
                 EraseRWCommand(cmd);
             }
             return cmd;
@@ -209,9 +207,9 @@ int CommandQueue::QueueUsage() const {
 }
 
 // gsheo: Read after write dependency check
-// PIM command들이 다 메모리 입장에서 read하는 command이기 때문에,
-// 같은 address에 대해 pim command 전에 write가 일어나면 안됨.
-// -> pim command도 isRead = true로 설정
+// since PIM commands are like read commands from the memory's perspective,
+// no write operations should occur at the same address before a PIM command is executed.
+// -> set isRead = true for pim command
 bool CommandQueue::HasRWDependency(const CMDIterator &cmd_it, const CMDQueue &queue) const {
     // Read after write has been checked in controller so we only
     // check write after read here

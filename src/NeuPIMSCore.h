@@ -25,7 +25,6 @@ class NeuPIMSCore {
 
     virtual void cycle();
 
-    // 7을 13번 shift
     // add index to each methods
     virtual bool has_memory_request1(uint32_t index) {
         return _memory_request_queues1[index].size() > 0;
