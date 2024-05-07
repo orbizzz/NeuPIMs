@@ -15,9 +15,7 @@ NewtonController::NewtonController(int channel, const Config &config, const Timi
       row_buf_policy_(config.row_buf_policy == "CLOSE_PAGE" ? RowBufPolicy::CLOSE_PAGE
                                                             : RowBufPolicy::OPEN_PAGE),
       last_trans_clk_(0), write_draining_(0) {
-    // 우려되는 점: read_queue의 늘어난 공간을 pim transaction이 아닌 read
-    // transaction에 사용될 수 있음 -> side effect
-    // => 그래서 어차피 serial하게 들어와서 queue size 늘리는게 의미 없을듯
+
     read_queue_.reserve(config_.trans_queue_size);
     write_buffer_.reserve(config_.trans_queue_size); // BUG: increase write_buffer size
 
@@ -255,7 +253,7 @@ bool NewtonController::AddTransaction(Transaction trans) {
             auto cmd = TransToCommand(trans);
             assert(!cmd.for_gwrite);
             if (cmd.for_gwrite)
-                return false; // p_header for gwrite는 일단 skip
+                return false; // skip p_header for gwrite
         } else {
             pending_pim_q_.insert(std::make_pair(trans.addr, trans));
             PrintWarning("cid:", channel_id_, "insert to pending_pim_q",
@@ -286,19 +284,18 @@ void NewtonController::ScheduleTransaction() {
         // we basically have a upper and lower threshold for write buffer
         if ((write_buffer_.size() >= write_buffer_.capacity()) ||
             (write_buffer_.size() > 8 && pim_cmd_queue_.QueueEmpty())) {
-            // write_buffer가 꽉차거나,
-            // write_buffer에 transaction이 8개 이상이고 cmd_queue가 비어있을때
+            // write_buffer is full or
+            // there are transactions more than 8 and cmd_queue is empty
             write_draining_ = write_buffer_.size();
         }
     }
 
-    // Newton에서는 PIM은 무조건 / read-write가 끝나고 한다.
-    // TODO: newton은 그냥 read_queue에 pim transaction도 받도록
+    // in Newton, only after read-write complete, execute PIM
     int pim_q_size = pim_cmd_queue_.GetPIMQueueSize();
 
     enum QueueToSchedule { READ_Q, WRITE_BUFFER, SIZE };
     QueueToSchedule queue_to_schedule = SIZE;
-    // Newton은 single row buffer임.
+    // Newton: single row buffer PIM
     if (rw_dependency_lock_)
         queue_to_schedule = READ_Q;
     else if (write_draining_ > 0)
@@ -319,7 +316,8 @@ void NewtonController::ScheduleTransaction() {
             if (cmd.IsWrite()) {
                 // Enforce R->W dependency
                 if (pending_rd_q_.count(it->addr) > 0) {
-                    // if it->addr에 해당하는 read가 transaction queue에 있으면 얘부터 넣어주기.
+                    // if there is read transaction (it->addr),
+                    // first push it
                     if (read_queue_.size() > 0) {
                         for (int i = 0; i < read_queue_.size(); i++) {
                             if (read_queue_[i].addr == it->addr) {
@@ -333,8 +331,6 @@ void NewtonController::ScheduleTransaction() {
                     write_draining_ = 0;
                     break;
                 } else if (pending_pim_q_.count(it->addr) > 0) {
-                    // 아마 여기서 안걸릴텐데. pim addr는 row까지밖에 valid
-                    // hmm..
                     auto pim_trans_ = pending_pim_q_.find(cmd.hex_addr);
                     if (pim_trans_->second.added_cycle < it->added_cycle) {
                         write_draining_ = 0;
@@ -489,14 +485,16 @@ Command NewtonController::DecodePIMTransaction(const Transaction &trans) {
     num_comps += addr.rank * config_.bankgroups * config_.banks_per_group;
     num_comps += addr.bankgroup * config_.banks_per_group;
     num_comps += addr.bank;
-    num_comps += 1; // 5bits 밖에 없어서 num_comps-1을 rabgba bit에 decode
+    num_comps += 1;
+    // we have only 5 bits usable,
+    // encode (num_comps-1) to rabgba bit 
 
     addr.rank = -1;
     addr.bankgroup = -1;
     addr.bank = -1;
     bool is_last = addr.column == 1;
 
-    // num_readres는 1로 고정
+    // fix num_readres to 1
     return Command(cmd_type, addr, trans.addr, is_last, num_comps);
 }
 

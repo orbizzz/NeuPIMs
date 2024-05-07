@@ -151,9 +151,9 @@ void NPUTensor::add_token() {
 }
 
 // get_row_addrs: row_idx -> [addr]
-// LayerNorm에서 2D tensor를 1D row 단위로 호출할 때 사용
-// 혹은 Softmax에서 3D tensor를 1D row 단위로 호출할 때 사용
-// inner가 NPUTensor2D 일 때만 사용해야 한다.
+// Used when invoking a 2D tensor by 1D row units in LayerNorm,
+// or when invoking a 3D tensor by 1D row units in Softmax.
+// Should only be used when inner is NPUTensor2D.
 std::vector<addr_type> NPUTensor::get_row_addrs(uint32_t row_idx) {
     // ast(_inners.size() == 1);
     // ast(_dims.size() == 2);

@@ -6,7 +6,6 @@
 
 PIM::PIM(SimulationConfig config)
     : _mem(std::make_unique<dramsim3::NewtonSim>(config.pim_config_path, config.log_dir)) {
-    // todo: pim_config에서 dram_channels 이런거 설정.
     _total_processed_requests.resize(config.dram_channels);
     _processed_requests.resize(config.dram_channels);
 
@@ -21,7 +20,6 @@ PIM::PIM(SimulationConfig config)
     spdlog::info("Newton init");
 }
 
-// todo:  gsheo : make sure all memory response processed
 bool PIM::running() { return false; }
 
 void PIM::cycle() {

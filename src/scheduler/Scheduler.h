@@ -13,7 +13,7 @@ class Scheduler {
     bool empty();
     bool running();
 
-    /* Client와 inference request, response를 주고 받기 위해 추가 */
+    /* for communicating inference request & response with Client */
     virtual void cycle();
     void add_request(std::shared_ptr<InferRequest> request);
     bool has_completed_request();

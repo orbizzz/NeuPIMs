@@ -28,8 +28,7 @@ class Client {
     uint32_t _issued_cnt;
     uint32_t _completed_cnt;
 
-    uint32_t _request_interval;  // (core_freq/qps) cycles마다 한번꼴로 request를
-                                 // 보내도록
+    uint32_t _request_interval; // send a request per (core_freq/qps) cycles
     std::queue<std::shared_ptr<InferRequest>> _waiting_queue;
 
     /* Random generate from poisson disribution (request arrival time)*/

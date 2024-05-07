@@ -236,16 +236,16 @@ class BTensor;
 typedef struct {
     // client to scheduler.
     uint32_t id;
-    uint32_t arrival_cycle;    // client에서 보낸 시간 == scheduler에 도착한 시간
-    uint32_t completed_cycle;  // client에 return 된 시간.
+    uint32_t arrival_cycle;    // time spend on client == arrival time to scheduler
+    uint32_t completed_cycle;  // return time to client
 
     // request demand
     uint32_t input_size;   // input sequence length
-    uint32_t output_size;  // generate해야하는 token 갯수
+    uint32_t output_size;  // # tokens to generate
 
     // request status
-    bool is_initiated;   // initialization phase 끝났는지 여부.
-    uint32_t generated;  // 현재까지 generate한 token 갯수
+    bool is_initiated;   // whether initialization phase is done
+    uint32_t generated;  // # tokens generated
     // mapped channel
     int channel;
 
@@ -258,7 +258,7 @@ void print_backtrace();
 void ast(bool cond);
 template <typename T>
 std::vector<T> slice(std::vector<T> &inp, int start, int end) {
-    if (end <= -1) end = inp.size() + (end + 1);  // python과 똑같이 동작
+    if (end <= -1) end = inp.size() + (end + 1);
     return std::vector<T>(inp.begin() + start, inp.begin() + end);
 }
 

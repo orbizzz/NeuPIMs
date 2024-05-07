@@ -1,8 +1,8 @@
 #pragma once
 #include "Common.h"
 
-// TensorBufType은 tensor가 어느 buffer에 저장 되어있는지를 의미.
-// weight이 ACT에 저장되어 있을 수도 있다.
+// TensorBufType indicates which buffer the tensor is stored in.
+// Weights might also be stored in the ACT (activation) buffer.
 enum class TensorBufType { WGT, ACT, KV };  // weight, activation, key/value
 
 class Tensor2D {

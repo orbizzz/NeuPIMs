@@ -21,8 +21,6 @@ NeuPIMSController::NeuPIMSController(int channel, const Config &config, const Ti
 
     rw_dependency_lock_ = false;
     rw_dependency_addr_ = 0;
-    // 우려되는 점: read_queue의 늘어난 공간을 pim transaction이 아닌 read
-    // transaction에 사용될 수 있음 -> side effect
 }
 
 // stat for pim utilization
@@ -304,8 +302,8 @@ void NeuPIMSController::ScheduleTransaction() {
         // we basically have a upper and lower threshold for write buffer
         if ((write_buffer_.size() >= write_buffer_.capacity()) ||
             (write_buffer_.size() > 8 && pim_cmd_queue_.QueueEmpty())) {
-            // write_buffer가 꽉차거나,
-            // write_buffer에 transaction이 8개 이상이고 cmd_queue가 비어있을때
+            // write_buffer is full or
+            // there are transactions more than 8 and cmd_queue is empty
             write_draining_ = write_buffer_.size();
         }
     }
@@ -370,7 +368,8 @@ void NeuPIMSController::ScheduleTransaction() {
             if (cmd.IsWrite()) {
                 // Enforce R->W dependency
                 if (pending_rd_q_.count(it->addr) > 0) {
-                    // if it->addr에 해당하는 read가 transaction queue에 있으면 얘부터 넣어주기.
+                    // if there is read transaction (it->addr),
+                    // first push it
                     if (read_queue_.size() > 0) {
                         for (int i = 0; i < read_queue_.size(); i++) {
                             if (read_queue_[i].addr == it->addr) {
@@ -384,8 +383,6 @@ void NeuPIMSController::ScheduleTransaction() {
                     write_draining_ = 0;
                     break;
                 } else if (pending_pim_q_.count(it->addr) > 0) {
-                    // 아마 여기서 안걸릴텐데. pim addr는 row까지밖에 valid
-                    // hmm..
                     auto pim_trans_ = pending_pim_q_.find(cmd.hex_addr);
                     if (pim_trans_->second.added_cycle < it->added_cycle) {
                         write_draining_ = 0;
@@ -502,7 +499,6 @@ Command NeuPIMSController::TransToCommand(const Transaction &trans) {
     return Command(cmd_type, addr, trans.addr);
 }
 
-// todo: NewtonController에서 사용하는 method랑 공유하도록
 Command NeuPIMSController::DecodePIMHeader(const Transaction &trans) {
     assert(trans.req_type == TransactionType::P_HEADER);
     // decode PIM header packet
@@ -534,7 +530,7 @@ Command NeuPIMSController::DecodePIMHeader(const Transaction &trans) {
 
     return Command(cmd_type, addr, trans.addr, for_gwrite, num_comps, num_readres);
 }
-// todo: NewtonController에서 사용하는 method랑 공유하도록
+
 Command NeuPIMSController::DecodePIMTransaction(const Transaction &trans) {
     assert(trans.req_type == TransactionType::COMPS_READRES);
     CommandType cmd_type = CommandType::COMPS_READRES;
@@ -545,14 +541,16 @@ Command NeuPIMSController::DecodePIMTransaction(const Transaction &trans) {
     num_comps += addr.rank * config_.bankgroups * config_.banks_per_group;
     num_comps += addr.bankgroup * config_.banks_per_group;
     num_comps += addr.bank;
-    num_comps += 1; // 5bits 밖에 없어서 num_comps-1을 rabgba bit에 decode
+    num_comps += 1;
+    // we have only 5 bits usable,
+    // encode (num_comps-1) to rabgba bit 
 
     addr.rank = -1;
     addr.bankgroup = -1;
     addr.bank = -1;
     bool is_last = addr.column == 1;
 
-    // num_readres는 1로 고정
+    // fix num_readres to 1
     return Command(cmd_type, addr, trans.addr, is_last, num_comps);
 }
 

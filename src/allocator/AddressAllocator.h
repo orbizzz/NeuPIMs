@@ -1,7 +1,7 @@
 #pragma once
 #include "../Common.h"
 
-// NPU + PIM에서 weight, NPU only에서 모든 tensor를 allocate 하는데 사용.
+// Used in NPU + PIM to allocate weights, and in NPU only to allocate all tensors.
 class WgtAlloc : public Singleton<WgtAlloc> {
    private:
     friend class Singleton;
@@ -25,12 +25,12 @@ class ActAlloc : public Singleton<ActAlloc> {
    public:
     addr_type _base_addr;
     addr_type _top_addr;
-    uint64_t _act_buf_size;   // 정해져있다.
+    uint64_t _act_buf_size;   // fixed.
     uint64_t _act_buf_limit;  // _base_addr + _act_buf_size
 
     void init(addr_type base_addr);
     addr_type allocate(uint64_t size);
-    addr_type get_next_aligned_addr();  // ActAlloc buf의 aligned limit addr + alignment
+    addr_type get_next_aligned_addr();  // aligned limit addr + alignment of ActAlloc buf
     void flush();
 };
 
@@ -45,10 +45,10 @@ class KVCacheAlloc : public Singleton<KVCacheAlloc> {
     addr_type _base_addr;
 
     // for NPU layout
-    uint64_t _kv_cache_size;          // 정해져있다.
+    uint64_t _kv_cache_size;          // fixed.
     uint64_t _kv_cache_limit;         // _base_addr + _kv_cache_size
     uint64_t _kv_cache_entry_size;    // 32 (bank per ch)
-    std::deque<addr_type> _kv_cache;  // 각 entry의 base_addr
+    std::deque<addr_type> _kv_cache;  // base_addr of each entry
 
     // for PIM layout
     uint64_t _dram_channels;

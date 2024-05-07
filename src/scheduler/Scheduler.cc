@@ -12,20 +12,17 @@ Scheduler::Scheduler(SimulationConfig config, const cycle_type *core_cycle)
 }
 
 void Scheduler::launch(Ptr<Model> model) {
-    // init model..?
-    // assign model?
-    // 여기서는 model만 할당하고
-    // schedule에서 batched request 와 model로 modelprogram 만듦
+    // assign model
+    // make modelprogram with batched request and model in schedule
     _model = model;
     spdlog::info("MODEL {} Launched in Scheduler", model->get_name());
 }
 
 void Scheduler::batch_request(Ptr<InferRequest> request) {
     if (!request->is_initiated) {
-        // [x] request->input_size 만큼 K/V cache 할당
         _active_reqs++;
 
-        // NOTE: KV cache의 생성은 scheduler에서, WRITE는 ModelProgram에서 진행한다.
+        // NOTE: KV cache generation in scheduler, WRITE in ModelProgram
         uint32_t h = _config.model_n_head / _config.n_tp;
         uint32_t d_k = _config.model_n_embd / _config.model_n_head;
         uint32_t seq_len = request->input_size;
@@ -34,9 +31,9 @@ void Scheduler::batch_request(Ptr<InferRequest> request) {
         std::vector<uint32_t> dim_value{h, seq_len, d_k};
 
         for (int layer = 0; layer < _config.model_n_layer; ++layer) {
-            // initiated되지 않은 request는 pim tensor 생성
+            // in case of request that is not `initiated`, construct pim tensor
             if (_config.run_mode == RunMode::NPU_ONLY) {
-                // KV cache의 produce를 true로 설정하는 로직 -> ModelProgram
+                // set KV cache's produce=true -> ModelProgram
                 auto k = std::make_shared<NPUTensor>(
                     name_gen(std::to_string(request->id), "KEY", std::to_string(layer)), dim_key,
                     NPUTensorKVType::KEY, true);
@@ -46,7 +43,7 @@ void Scheduler::batch_request(Ptr<InferRequest> request) {
                 request->K_cache.push_back(k);
                 request->V_cache.push_back(v);
             } else {
-                // PIM tensor의 경우.
+                // PIM tensor
                 uint32_t ch = _next_ch % _config.dram_channels;
                 spdlog::info("Scheduler allocate request#{}(seq_len:{}) to channel {}<<",
                              request->id, seq_len, ch);
@@ -60,16 +57,6 @@ void Scheduler::batch_request(Ptr<InferRequest> request) {
                 request->V_cache.push_back(v);
             }
         }
-        // if (_next_ch > 0) request->is_initiated = true;
-        // if (_next_ch < 24) request->is_initiated = true;  // FIXME: remove this line
-        // if (_next_ch >= 8) request->is_initiated = true;
-        // if (_next_ch < 8 || _next_ch >= 16) request->is_initiated = true;
-        // if (_next_ch < 16 || _next_ch >= 24) request->is_initiated = true;
-
-        // if (_next_ch < 16) request->is_initiated = true;
-        // if (_next_ch < 8) request->is_initiated = true;
-
-        // if (_next_ch > 8) request->is_initiated = true;
 
         request->is_initiated = true;
         _next_ch++;
@@ -88,11 +75,11 @@ void Scheduler::make_program() {
 void Scheduler::cycle() {
     _cycles++;
 
-    // << scheduling decision을 내리는 시점: 아래조건 모두 만족할때 >>
-    // 1. request_queue가 비어있지 않음.
-    // 2. 돌아가고 있는 model program 없음 (iteration 끝남)
-    // 3. 스케줄링 조건 충족..
-    //    예를 들어 request_queue size > 5 이상이거나, waiting_time이 100 이상이거나.. 등등.
+    // << Scheduling decision trigger: when meet every following conditions >>
+    // 1. request_queue is not empty
+    // 2. there is no running model_program (iteration completed)
+    // 3. scheduling condition:
+    //    e.g.) request_queue size > 5, or waiting_time > 100
     if (_model_program == nullptr && _breq.size() > 0) {
         make_program();
     }
@@ -183,9 +170,9 @@ void Scheduler::finish_program() {
 
     _model_program->log();
 
-    // < model program이 끝났을때 할일 >
-    // batched request에 있는 InferRequest들의 generated++;
-    // completed request는 client에 반환
+    // < todos when the model program has finished >
+    // - increment `generated` of InferRequest to 1 in batched request
+    // - return completed request to client
     for (auto it = _breq.begin(); it != _breq.end(); it++) {
         Ptr<InferRequest> request = *it;
 
@@ -204,7 +191,7 @@ void Scheduler::finish_program() {
             // spdlog::info("Scheduler::return request_id: {}", request->id);
             _completed_request_queue.push(request);
 
-            // [ ] complete 됐을 때 KV cache free logic 넣기
+            // when completed, free KV cache
             for (auto itr = _request_queue.begin(); itr != _request_queue.end();) {
                 Ptr<InferRequest> cur = *itr;
                 if (cur->id == request->id) {

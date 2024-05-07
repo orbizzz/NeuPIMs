@@ -112,7 +112,7 @@ class Model {
     std::vector<std::shared_ptr<Operation>> get_executable_operations();
     bool check_finish();
     uint64_t get_weight_size();
-    addr_type get_weight_top_addr();  // aligned된 weight의 top address + alignemnt를 return
+    addr_type get_weight_top_addr(); // Return the top address of the aligned weight + alignment.
     void log_model();
 
    private:

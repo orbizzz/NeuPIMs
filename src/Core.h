@@ -20,7 +20,6 @@ class Core {
 
     virtual void cycle();
 
-    // 7을 13번 shift
     // add index to each methods
     virtual bool has_memory_request(uint32_t index) {
         return _memory_request_queues[index].size() > 0;

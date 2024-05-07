@@ -1,48 +1,3 @@
-// #include <cmath>
-/*
->>> GEMV Softmax tiling (QK+Softmax) <<<
-
-page_size = 512; // dram row 하나에 들어가는 parameter 수
-banks_per_channel = 32;
-datas_per_comp_cmd = 16;
-
-chunks = ceil(E/page_size); // gwrite 수
-tiles_per_chunk = allocated_rows_for_key / banks_per_channel; // comp-readres kernel 수
-heads_per_tile = ceil(page_size/dk); // readres 수
-comps_per_head = ceil(dk/datas_per_comp_cmd);
-
-std::vector<uint32_t> pim_result_addrs;
-for (auto chunk: chunks) {
-    >>> gsheo: P_HEADER (for_gwrite=true)
-    >>> gsheo: GWRITE (channel, bank, row)
-    for (auto tile: tiles_per_chunk) {
-        >>> gsheo: P_HEADER (num_comps = comps_per_head * num_heads, num_readres = heads_per_tile)
-        for (auto head: heads_per_tile) {
-            >>> gsheo: COMP * comps_per_head
-            // -- activation --
-            >>> gsheo: READRES * 1 -> 얘만 sram dest_addr.. valid 한걸로? req#1, head#1
-(sram_readres_result_addr#1)
-
-            pim_result_addrs.push_back(sram_readres_result_addr);
-
-        }
-    }
-
-    for pim_result_addrs
-        // -- compute --
-        >>> gsheo: SoftMax -for req#1 head#1
-            hit: # tiles per chunk
-            dest_addr: ?
-            src_addr: sram_readres_result_addrs in this chunk
-
-        // -- save outputs --
-        >>> gsheo: WRITE (seq_len * 1) activation params
-
-    pim_result_addrs.clear();
-}
-
-*/
-
 #include "PIMGEMVSoftmax.h"
 
 PIMGEMVSoftmax::PIMGEMVSoftmax(std::string name) : Operation(name) {}
@@ -126,7 +81,7 @@ Tile PIMGEMVSoftmax::initialize_instructions() {
         std::map<uint32_t, std::vector<addr_type>> sram_readres_addrs;
 
         uint32_t tiles_per_chunk =
-            key->get_allocated_seq_len() / banks_per_channel;  // comp-readres kernel 수
+            key->get_allocated_seq_len() / banks_per_channel;  // number of comp-readres kernels
 
         for (int chunk = 0; chunk < _chunks; chunk++) {
             // uint64_t make_address(channel, rank, bankgroup, bank, row, col);
@@ -246,7 +201,7 @@ Tile PIMGEMVSoftmax::initialize_instructions() {
                 .size = column_height * _config.precision,
                 .src_addrs = std::static_pointer_cast<NPUTensor>(_outputs[i])
                                  ->_inners[hi]
-                                 ->get_all_addrs(),  // TODO:
+                                 ->get_all_addrs(),
                 .operand_id = _OUTPUT_OPERAND,
             });
             sram_acc_base += column_height * _config.precision;
@@ -265,12 +220,12 @@ void PIMGEMVSoftmax::calculate_loops() {
 
     uint32_t E = _config.model_n_embd;
     uint32_t page_size =
-        _config.dram_page_size / _config.precision;  // dram row 하나에 들어가는 parameter 수
+        _config.dram_page_size / _config.precision;  // number of parameters in dram row
     uint32_t banks_per_channel = _config.dram_banks_per_ch;
     uint32_t datas_per_comp_cmd = _config.pim_comp_coverage;
 
-    _chunks = ceil((double)E / page_size);            // gwrite 수
-    _heads_per_tile = ceil((double)page_size / _dk);  // readres 수
+    _chunks = ceil((double)E / page_size);            // # of gwrite
+    _heads_per_tile = ceil((double)page_size / _dk);  // # of readres
     _heads_in_last_chunk = ceil((double)(E % page_size) / _dk);
     _comps_per_head = ceil((double)_dk / datas_per_comp_cmd);
     std::string yellow = "\033[1;33m";

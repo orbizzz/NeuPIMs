@@ -33,8 +33,8 @@ NewtonSim::NewtonSim(const std::string &config_file, const std::string &output_d
     dram_system_ = new JedecDRAMSystem(*config_, output_dir, read_callback, write_callback);
 
     // printf("Newtonsim: # of channel= %d\n", config_->channels);
-    // channel 수 만큼의 reponse queues,
-    // response queue당 trans_queue_size 만큼의 size
+    // # channels = # reponse queues,
+    // size of response queue = trans_queue_size
     int res_q_size;
 
     if (config_->memory_type == MemoryType::DRAM) {

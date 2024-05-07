@@ -105,7 +105,7 @@ std::vector<std::shared_ptr<Operation>> Operation::get_child_nodes() {
 }
 
 bool Operation::check_executable() {
-    // 해당 operation을 child로 가지는 모든 tensor의 생성이 끝나야 실행 가능
+    // Execution is possible only after the creation of all tensors that have this operation as a child.
     bool result = true;
     for (auto input : _inputs) {
         result = result && input->get_produced();

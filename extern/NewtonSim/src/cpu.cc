@@ -5,8 +5,7 @@ namespace dramsim3 {
 
 // TODO: Make this function in common.h
 uint64_t CPU::MakeAddress(int channel, int rank, int bankgroup, int bank, int row, int col) {
-    // rorabgbachco
-    // HBM2_8Gb_s128_pim.ini기준
+    // rorabgbachco (HBM2_8Gb_s128_pim.ini)
     uint64_t addr = 0;
 
     int row_bits = 15;
@@ -49,7 +48,7 @@ uint64_t CPU::MakePHeaderPacket(int channel, int row, bool for_gwrite, int num_c
                                 int num_readres) {
     int gwrite_bit = for_gwrite ? 1 : 0;
 
-    // column bit를 4bits밖에 못써서.. shift_amount로 사용..
+    // we can have only 4 bits for column bit, so use as shift_amount
     int log_comps = (gwrite_bit << 3) + LogBase2(num_comps);
     int log_readres = LogBase2(num_readres);
 
@@ -78,7 +77,6 @@ void RandomCPU::ClockTick() {
 
         bool for_gwrite = false;
 
-        // column bit를 4bits밖에 못써서.. shift_amount로 사용..
 
         uint64_t p_header_addr =
             MakePHeaderPacket(channel, row, for_gwrite, num_comps_, num_readres_);
@@ -102,34 +100,7 @@ void RandomCPU::ClockTick() {
         // }
         gemv_turn_ = false;
     }
-    // else if (gemv_turn_) {
-    //     // COMP-READRES command를 보면,,
-    //     // GACT는 필요할때 memory controller가 자동 생성
-    //     // COMP, READRES는 Channel command라고 보면 될성.
-    //     if (num_comps_ == 0 && num_readres_ == 0) {
-    //         gemv_turn_ = false;
-    //         PrintColor(Color::GREEN, "GEMV DONE");
-    //         clk_++;
-    //         return;
-    //     }
 
-    //     if (num_comps_ > 0) {
-    //         req_type = TransactionType::COMP;
-    //         num_comps_--;
-    //     } else if (num_readres_ > 0) {
-    //         req_type = TransactionType::READRES;
-    //         num_readres_--;
-    //     }
-    //     get_next_ = memory_system_.WillAcceptTransaction(addr, req_type);
-    //     if (get_next_)
-    //         memory_system_.AddTransaction(addr, req_type);
-    // } else if (clk_ % 10 == 1) {
-    //     TransactionType req_type = TransactionType::READ;
-    //     get_next_ = memory_system_.WillAcceptTransaction(last_addr_, req_type);
-    //     if (get_next_) {
-    //         memory_system_.AddTransaction(last_addr_, req_type);
-    //     }
-    // }
 
     clk_++;
 

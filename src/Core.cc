@@ -97,7 +97,7 @@ void Core::issue(Tile &in_tile) {
     tile->spad_id = _current_spad;
     if (!tile->accum) {
         /* Accumeulate tile uses same acc spad buffer */
-        // K > 1이면 같은 acc_spad에 accumulate 한다.
+        // accumulate to same acc_spad if K > 1
         _current_acc_spad = (_current_acc_spad + 1) % 2;
         _acc_spad.flush(_current_acc_spad);
     }
@@ -275,7 +275,7 @@ void Core::push_memory_response(MemoryAccess *response) {
                response->req_type == MemoryAccessType::GWRITE ||
                response->req_type == MemoryAccessType::COMP) {
         // pim_header, pim_gwrite, pim_comp
-        // pim_header는 response가 오지 않음.
+        // pim_header request does not receive response
     } else if (response->spad_address >= ACCUM_SPAD_BASE) {
         // spdlog::info("{} response to accum_spad, cycle:{}", is_read ? "LOAD" : "GEMV",
         //              _core_cycle);  // >>> gsheo: remove it before commit
@@ -297,7 +297,6 @@ bool Core::can_issue_compute(Instruction &inst) {
 
     // src addr: spad key
     for (addr_type addr : inst.src_addrs) {
-        // fused mha는 _acc_spad에서 check_hit을 해야하는데..
         if (inst.src_from_accum && addr >= ACCUM_SPAD_BASE) {
             result = result && _acc_spad.check_hit(addr, inst.accum_spad_id);
             continue;

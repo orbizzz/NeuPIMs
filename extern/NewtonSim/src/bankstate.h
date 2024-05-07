@@ -14,7 +14,7 @@ class BankState {
     /* The row corresponding to OPEN: open_row_ is active */
     /* CLOSED: No row is open, active */
     /* SREF: self-refresh status, waiting for refresh to end.
-     * * SREF_EXIT command 활용.  */
+     * * SREF_EXIT command.  */
     /* PIM: State for Newton computation. (new)  */
     /* PD, SIZE: invalid state. */
     // gsheo: With OPENforPIM, whether it's 32 or k

@@ -66,8 +66,8 @@ std::vector<Ptr<BTensor>> MatMul::get_outputs(std::vector<Ptr<BTensor>> inputs) 
 
     auto larger_dim = input0_dims.size() > input1_dims.size() ? input0_dims : input1_dims;
     std::vector<uint32_t> output_dims(larger_dim.begin(), larger_dim.end());
-    *(output_dims.rbegin() + 1) = *(input0_dims.rbegin() + 1);  // (M, K) x (K, N)에서 (M, x)를 설정
-    *output_dims.rbegin() = *input1_dims.rbegin();  // (M, K) x (K, N)에서 (x, N)를 설정
+    *(output_dims.rbegin() + 1) = *(input0_dims.rbegin() + 1);  // Set (M, x) in matmul (M, K) x (K, N).
+    *output_dims.rbegin() = *input1_dims.rbegin();  // Set (x, N) in matmul (M, K) x (K, N)
     spdlog::info("MatMul output sz: {}", output_dims);
 
     _outputs[0] =
@@ -85,8 +85,9 @@ std::vector<Ptr<BTensor>> MatMul::get_outputs(std::vector<Ptr<BTensor>> inputs) 
 }
 
 void MatMul::initialize_tiles() {
-    // 여기서 B는 batch_size가 아니라, [b, h, l, d_k]에서의 b*h처럼
-    // matmul 바깥의 tensor dim을 의미함.
+    // Here, B does not refer to batch_size, 
+    // but rather to the outer dimensions of the tensor in matmul,
+    // such as b*h in [b, h, l, d_k].
     for (uint32_t B = 0; B < _prod_batches; ++B) {
         for (uint32_t M = 0; M < _outer_loop[0]; ++M) {
             for (uint32_t N = 0; N < _outer_loop[2]; ++N) {
@@ -112,7 +113,7 @@ Tile MatMul::initialize_instructions(uint32_t B, uint32_t M, uint32_t K, uint32_
     };
 
     // base on the inner loop, initialize instructions
-    // _inner_loop는 L2 tile size를 의미.
+    // _inner_loop means L2 tile size
     auto m_inner = _inner_loop[0];  // M-axis L2 tile size
     auto k_inner = _inner_loop[1];  // K-axis L2 tile size
     auto n_inner = _inner_loop[2];  // N-axis L2 tile size
@@ -121,7 +122,7 @@ Tile MatMul::initialize_instructions(uint32_t B, uint32_t M, uint32_t K, uint32_
     auto k_outer_offset = k_inner * K;  // K-axis L2 tile idx
     auto n_outer_offset = n_inner * N;  // N-axis L2 tile idx
 
-    // SPM에 ACT / WGT 순서로 tile을 load.
+    // load tile to SPM in order ACT / WGT
     addr_type sram_activation_base = SPAD_BASE;
     addr_type sram_weight_base = SPAD_BASE + m_inner * k_inner * _config.precision;
     addr_type sram_accumulation_base = ACCUM_SPAD_BASE;
@@ -152,14 +153,13 @@ Tile MatMul::initialize_instructions(uint32_t B, uint32_t M, uint32_t K, uint32_
 
     // -- bias --
     // if      input size is 2, no need for bias initialization
-    //         (_inputs[2]가 존재 x)
+    //         (_inputs[2] x)
     // else if input size is 3, and is not accumulation tile, create activation
     // region using bias load
     if (_inputs.size() == 3 && K == 0) {
         auto bias_tensor = std::static_pointer_cast<NPUTensor>(_inputs[2]);
         for (uint32_t n_inner_offset = 0; n_inner_offset < n_inner; n_inner_offset += loop_size) {
-            // n_inner_offset은 각 L2 tile 안에서 L1 tile의 start index를
-            // 나타낸다.
+            // n_inner_offset: L1 tile start index in each L2 tile
             std::vector<addr_type> bias_addrs;
             for (uint32_t n_loop = 0; n_loop < loop_size; ++n_loop) {
                 // get address by get_addr
@@ -187,8 +187,8 @@ Tile MatMul::initialize_instructions(uint32_t B, uint32_t M, uint32_t K, uint32_
         }
     }
 
-    // ex: [2, 12, seq_len, d_k]에서 B=14, emb_dim_size=2 넣으면 [1, 1] return
-    // inner_offset은 tensor base addr에서 L1 tile start 지점까지의 index
+    // ex: [2, 12, seq_len, d_k] B=14, emb_dim_size=2 -> return [1, 1]
+    // inner_offset is the index from the tensor base address to the start point of the L1 tile.
     for (uint32_t n_inner_offset = 0; n_inner_offset < n_inner; n_inner_offset += loop_size) {
         for (uint32_t k_inner_offset = 0; k_inner_offset < k_inner; k_inner_offset += loop_size) {
             for (uint32_t m_inner_offset = 0; m_inner_offset < m_inner;
@@ -210,8 +210,8 @@ Tile MatMul::initialize_instructions(uint32_t B, uint32_t M, uint32_t K, uint32_
                 if (n_inner_offset == 0) {
                     tile_m = 0;
                     tile_k = 0;
-                    // n_inner tile을 돌 동안, (중복 방지)
-                    // 첫 번째 inner loop에서만 MOVIN instruction을 추가.
+                    // During the n_inner tile iterations (to prevent duplication),
+                    // add the MOVIN instruction only in the first inner loop.
                     std::vector<addr_type> activation_addrs;
                     for (int m_loop = 0; m_loop < loop_size; m_loop++) {
                         for (int k_loop = 0; k_loop < loop_size; k_loop++) {
@@ -256,8 +256,8 @@ Tile MatMul::initialize_instructions(uint32_t B, uint32_t M, uint32_t K, uint32_
                 // -- weight --
                 if (m_inner_offset == 0) {
                     tile_n = 0;
-                    // m_inner tile을 돌 동안, (중복 방지)
-                    // 첫 번째 inner loop에서만 MOVIN instruction을 추가.
+                    // During the m_inner tile iterations (to prevent duplication),
+                    // add the MOVIN instruction only in the first inner loop.
                     std::vector<addr_type> weight_addrs;
                     for (int k_loop = 0; k_loop < loop_size; k_loop++) {
                         for (int n_loop = 0; n_loop < loop_size; n_loop++) {
@@ -309,7 +309,7 @@ Tile MatMul::initialize_instructions(uint32_t B, uint32_t M, uint32_t K, uint32_
                 //           << n_inner_offset << std::endl;
                 // std::cout << "tile " << tile_m << " " << tile_n << " " << tile_k << std::endl;
                 // -- compute --
-                // 첫 번째 L1 tile을 실행할 때는 GEMM_PRELOAD instruction을 실행
+                // in case of 1st L1 tile execution, execute GEMM_PRELOAD instruction
                 tile.instructions.push_back(Instruction{
                     .opcode = (m_inner_offset == 0 ? Opcode::GEMM_PRELOAD : Opcode::GEMM),
                     .dest_addr = sram_accumulation_offset,
@@ -325,7 +325,8 @@ Tile MatMul::initialize_instructions(uint32_t B, uint32_t M, uint32_t K, uint32_
                     .tile_n = tile_n,
                 });
                 // -- store --
-                // inner_loop k를 다 돌았을 때 output에 L1 tile을 store.
+                // when iterating inner_loop k times,
+                // store L1 tile to output
                 if (should_store && (k_inner_offset + loop_size >= k_inner)) {
                     std::vector<addr_type> output_addrs;
                     for (int n_loop = 0; n_loop < loop_size; n_loop++) {
@@ -364,9 +365,8 @@ Tile MatMul::initialize_instructions(uint32_t B, uint32_t M, uint32_t K, uint32_
 }
 
 // Initialize _inner_loop, _outer_loop
-// _inner_loop는 각 axis M, N, K의 L2 tile size를 나타낸다.
-// _outer_loop는 matmul이 각 axis M, N, K에서 몇 개의 L2 tile로 나눠지는 지를
-// 의미한다.
+// _inner_loop represents the L2 tile size for each axis M, N, K.
+// _outer_loop indicates how many L2 tiles the matmul is divided into across each axis M, N, K.
 void MatMul::calculate_loops() {
     std::vector<uint32_t> input0_dims(_inputs[0]->get_dims());
     std::vector<uint32_t> input1_dims(_inputs[1]->get_dims());
@@ -387,8 +387,7 @@ void MatMul::calculate_loops() {
 
     // larger_dims: [768, 2304] => _prod_batches: 1
     // larger_dims: [1, 12, 64, 15] => _prod_batches: 12
-    // 하위 두 차원을 제외하고, 나머지를 모두 곱해 matmul의 반복 횟수를
-    // 계산한다.
+    // Calculate the number of iterations for matmul by multiplying all dimensions except the last two.
     _prod_batches = 1;
     auto larger_dims = input0_dims.size() > input1_dims.size() ? input0_dims : input1_dims;
     for (uint32_t i = 0; i + 2 < larger_dims.size(); i++) {
@@ -397,8 +396,9 @@ void MatMul::calculate_loops() {
 
     while (sram_size_needed() > _config.spad_size KB / 2)  // double buffer
     {
-        // max_element는 iterator를 return.
-        // max_element의 dim을 1/2로 쪼개고, outer_loop를 1 증가시킨다.
+        // max_element return iterator
+        // divide max_element dimension to 1/2,
+        // increment outer_loop to 1
         auto max_el = max_element(_inner_loop.begin(), _inner_loop.end());
         _outer_loop[max_el - _inner_loop.begin()] *= 2;
         *max_el = ((*max_el) & 1) + ((*max_el) >> 1);  // ceil(*max_el / 2)
@@ -418,9 +418,9 @@ void MatMul::calculate_loops() {
 
 // bias is loaded to the accumulation space
 uint32_t MatMul::sram_size_needed() {
-    // inner loop [130, 130, 130]을 128x128 SA에서 수행하는 상황이면
-    // [130 + (128-2), 130 + (128-2), 130 + (128-2)] = [256, 256, 256]으로
-    // align해서 SRAM에 load 한다.
+    // If performing the inner loop [130, 130, 130] on a 128x128 SA,
+    // align to [256, 256, 256] by adding [128 - 2, 128 - 2, 128 - 2] to each dimension,
+    // and load into SRAM.
 
     auto n = _inner_loop[0];
     if (n % _config.core_width != 0) {
