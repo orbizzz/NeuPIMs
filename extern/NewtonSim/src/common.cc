@@ -11,8 +11,8 @@ namespace dramsim3 {
 
 namespace LOGGING_CONFIG {
 bool STATUS_CHECK = false;
-uint32_t TROUBLE_ADDR = 816834560;  // 해당 주소만 logging하기 위함
-uint32_t TROUBLE_CHANNEL = 0;       // 해당 채널만 logging하기 위함
+uint32_t TROUBLE_ADDR = 816834560;  // for logging only specific addr
+uint32_t TROUBLE_CHANNEL = 0;       // for logging only specific channel
 bool PIMSIM_LOGGING = false;
 bool PIMSIM_LOGGING_DEBUG = false;
 bool LOGGING_ONLY_TROUBLE_ZONE = true;

@@ -185,7 +185,6 @@ Tile NeuPIMSAttend::initialize_instructions(int start, int end) {
                     auto sram_entry = allocate_sram_addr(_banks_per_channel, false);
                     addr_type sram_addr = sram_entry.first;
 
-                    // chunks * ci + ti 아닌가??
                     uint32_t DRAM_row = value->_rows[ti * chunks + ci];
                     p_header_addr =
                         AddressConfig::encode_pim_header(ch, DRAM_row, false, decoded_num_comps, 1);
@@ -259,7 +258,7 @@ Tile NeuPIMSAttend::initialize_instructions(int start, int end) {
                         .size = sram_acc_entry.second,
                         .src_addrs = std::static_pointer_cast<NPUTensor>(_outputs[i])
                                          ->_inners[hi]
-                                         ->get_all_addrs(),  // TODO:
+                                         ->get_all_addrs(),
                         .operand_id = _OUTPUT_OPERAND,
                     });
                 }
@@ -307,8 +306,6 @@ void NeuPIMSAttend::calculate_loops() {
             // now support only incremental phases
         }
 
-        // if (!_config.baseline_exp && _config.sub_batch_mode) continue;
-        // TODO: sub-batch-interleaving에서는 일단 PIM tile은 딱 하나씩만.. -> 나중에 수정.
 
         if (sram_needs > _config.spad_size KB / _config.precision) {
             assert(i > 0);
@@ -320,7 +317,7 @@ void NeuPIMSAttend::calculate_loops() {
 }
 
 uint32_t NeuPIMSAttend::sram_size_needed() {
-    /// gemvadd activation을 위한 space = dk * batch_size?
+    /// space for gemvadd activation = dk * batch_size?
     uint32_t need_size = _batch_size * _config.model_n_head * _dk * _config.precision;
 
     return 0;  // need_size;

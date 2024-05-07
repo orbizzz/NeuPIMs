@@ -49,7 +49,7 @@ addr_type AddressConfig::switch_co_ch(addr_type addr) {
     return addr;
 }
 
-// NPU only에서 사용하면 된다.
+// used in NPU-only
 // this is creating dram address.
 // align cachline size to 4B
 // ex) allocate 31 bytes => align to 32 bytes
@@ -234,7 +234,7 @@ void initialize_memory_config(std::string mem_config_path) {
         Config::global_config.dram_page_size = mem_config["dram_page_size"];
         Config::global_config.dram_banks_per_ch =
             mem_config["dram_banks_per_ch"];
-        // PIM COMP command당 처리하는 parameter 수
+        // # params per PIM_COMP command
         Config::global_config.pim_comp_coverage =
             mem_config["pim_comp_coverage"];
     }
@@ -508,7 +508,7 @@ int LogBase2(int power_of_two) {
 uint64_t AddressConfig::make_address(int channel, int rank, int bankgroup,
                                      int bank, int row, int col) {
     // rorabgbachco
-    // HBM2_8Gb_s128_pim.ini기준
+    // HBM2_8Gb_s128_pim.ini
     uint64_t addr = 0;
 
     int row_bits = 15;
@@ -557,7 +557,8 @@ uint64_t AddressConfig::encode_pim_header(int channel, int row, bool for_gwrite,
                                           int num_comps, int num_readres) {
     int gwrite_bit = for_gwrite ? 1 : 0;
 
-    // column bit를 4bits밖에 못써서.. shift_amount로 사용..
+    // we can use only 4 bits for column bit
+    // use it to shift_amount
     int log_comps = (gwrite_bit << 3) + LogBase2(num_comps);
     int log_readres = LogBase2(num_readres);
 
@@ -586,7 +587,7 @@ uint64_t AddressConfig::encode_pim_comps_readres(int ch, int row, int num_comps,
     return make_address(ch, rank, bankgroup, bank, row, col);
 }
 
-// Sub-batch interleaving에 사용
+// used for sub-batch interleaving
 std::string stageToString(Stage stage) {
     static const std::map<Stage, std::string> stageMap = {
         {Stage::A, "A"},           {Stage::B, "B"}, {Stage::C, "C"},

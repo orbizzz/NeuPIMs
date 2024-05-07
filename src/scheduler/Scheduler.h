@@ -24,7 +24,7 @@ class Scheduler {
     Stage get_prev_stage() { return _prev_stage; }
     void reset_has_stage_changed_status() { _has_stage_changed = false; }
 
-    /* Client와 inference request, response를 주고 받기 위해 추가 */
+    /* for communicating inference request & response with Client */
     virtual void cycle();
     void add_request(std::shared_ptr<InferRequest> request);
     bool has_completed_request();
@@ -118,12 +118,12 @@ class Scheduler {
     uint32_t _total_available_tiles;
     std::vector<uint32_t> _available_tiles;
 
-    uint32_t _key_period;  // 몇 토큰마다 key page를 생성할지
+    uint32_t _key_period;  // how often to create a page per number of tokens.
     uint32_t _value_period;
-    uint32_t _key_page_size;  // page안의 pim tile 수 (available_tiles와 관련)
+    uint32_t _key_page_size;  // # of pim tile in page (related to available_tiles)
     uint32_t _value_page_size;
 
-    // Stage 설명
+    // explanation on Stage
     //
     // |     |     A    |     B    |         C        |         D        |     E     |     F     |
     // |-----|:--------:|:--------:|:----------------:|:----------------:|:---------:|:---------:|

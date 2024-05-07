@@ -62,11 +62,11 @@ Scheduler::Scheduler(SimulationConfig config, const cycle_type* core_cycle)
     spdlog::info("Total PIM tiles: {}", _total_tiles);
     spdlog::info("Tiles per channel: {}", tiles_per_channel);
 
-    // 몇 token마다 page 생성해야하는지
+    // how often to create a page per number of tokens.
     _key_period = _dram_banks_per_ch;
     _value_period = _dram_page_size;
 
-    // page가 몇개의 pim_tile로 구성되어있는지
+    // how many PIM tiles compose a page.
     _key_page_size = ceil((double)_effective_e / _value_period);
     _value_page_size = ceil((double)_effective_e / _key_period);
 
@@ -251,7 +251,7 @@ int Scheduler::estimate_mha_latency(Ptr<InferRequest> request) {
 void Scheduler::group_sub_batches() {
     if (_config.baseline_exp) {
         //>>>
-        // 한쪽 Batch로 몰기
+        // Consolidate to one batch
         for (int ch = 0; ch < _dram_channels; ch++) {
             auto req_queue = _active_request_queues[ch];
             for (auto it = req_queue.begin(); it != req_queue.end(); it++) {
@@ -304,7 +304,7 @@ void Scheduler::group_sub_batches() {
     spdlog::info("total batch_size: {}", _breq1.size() + _breq2.size());
 }
 
-// 딱 한번만 호출됨
+// Called exactly once
 void Scheduler::init_batches() {
     setup_requests();
     group_sub_batches();
@@ -501,9 +501,9 @@ bool Scheduler::empty2() { return _model_program2 == nullptr; }
 bool Scheduler::running() { return !_request_queue.empty() || !_completed_request_queue.empty(); }
 
 void Scheduler::cleanup_sub_batch(std::vector<Ptr<InferRequest>> sub_batch) {
-    // < model program이 끝났을때 할일 >
-    // batched request에 있는 InferRequest들의 generated++;
-    // completed request는 client에 반환
+    // < todos when the model program has finished >
+    // - increment `generated` of InferRequest to 1 in batched request
+    // - return completed request to client
     for (auto it = sub_batch.begin(); it != sub_batch.end(); it++) {
         Ptr<InferRequest> request = *it;
 
@@ -522,7 +522,7 @@ void Scheduler::cleanup_sub_batch(std::vector<Ptr<InferRequest>> sub_batch) {
             // spdlog::info("Scheduler::return request_id: {}", request->id);
             _completed_request_queue.push(request);
 
-            // todo: complete 됐을 때 KV cache free logic 넣기
+            // when completed, free KV cache
             for (auto itr = _request_queue.begin(); itr != _request_queue.end();) {
                 Ptr<InferRequest> cur = *itr;
                 if (cur->id == request->id) {

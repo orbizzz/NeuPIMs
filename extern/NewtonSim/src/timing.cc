@@ -381,7 +381,7 @@ Timing::Timing(const Config &config)
         };
 
     // command G_ACT
-    // 사실은 same_bankgroup
+    // actually same_bankgroup
     other_banks_same_bankgroup[static_cast<int>(CommandType::G_ACT)] =
         std::vector<std::pair<CommandType, int>>{
             {CommandType::ACTIVATE, gact_to_act_same_bg},
@@ -436,7 +436,7 @@ Timing::Timing(const Config &config)
             {CommandType::PRECHARGE, pim_to_precharge},
             {CommandType::COMP, read_to_read_s},    // deprecated
             {CommandType::READRES, read_to_read_s}, // deprecated
-            // COMPS_READRES는 해당 command의 num_comps에 따라 결정됨.
+            // timing for COMPS_READRES is decided by num_comps of corresponding command
         };
 }
 

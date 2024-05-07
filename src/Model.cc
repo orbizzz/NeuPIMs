@@ -96,11 +96,11 @@ void Model::init_params() {
         create_weight(name_gen(ffn, OperationType::FullyConnected2, ParameterType::Bias),
                       {_config.model_n_embd});
     }
-    // LM head는 encoder, decoder 모두 GEMV
+    // LM head: both encoder, decoder are GEMV
     create_weight(name_gen(OperationType::LmHead, ParameterType::Weight),
                   {_config.model_n_embd, _config.model_vocab_size});
 
-    // buffer의 base addr을 정하기 위해 weight의 size를 미리 계산
+    // in advance, caculate weight size to decide base addr of buffer
     _wgt_size = 0;
     for (auto const &[tensor_name, tensor] : _wgt_map) {
         _wgt_size += tensor->_inners[0]->_size;
@@ -119,67 +119,7 @@ std::vector<Ptr<NPUTensor>> Model::get_params(int layer_idx, std::string block_t
     return {wgt, bias};
 }
 
-// - layer#
-//   - attn
-//     - ln
-//     - QKVGen
-//     - proj
-//   - ffn
-//     - ln
-//     - fc1
-//     - fc2
-// void Model::initialize_gpt2_params() {
-//     for (int i = 0; i < _config.model_n_layer; ++i) {
-//         auto attn = name_gen(LAYER(i), BlockType::Attention);
-//         create_weight(name_gen(attn, OperationType::LayerNorm, ParameterType::Weight),
-//                       {_config.model_n_embd});
-//         create_weight(name_gen(attn, OperationType::LayerNorm, ParameterType::Bias),
-//                       {_config.model_n_embd});
-//         create_weight(name_gen(attn, OperationType::QKVGen, ParameterType::Weight),
-//                       {_config.model_n_embd, 3 * _config.model_n_embd});
-//         create_weight(name_gen(attn, OperationType::QKVGen, ParameterType::Bias),
-//                       {3 * _config.model_n_embd});
-//         create_weight(name_gen(attn, OperationType::Projection, ParameterType::Weight),
-//                       {_config.model_n_embd, _config.model_n_embd});
-//         create_weight(name_gen(attn, OperationType::Projection, ParameterType::Bias),
-//                       {_config.model_n_embd});
 
-//         auto ffn = name_gen(LAYER(i), BlockType::FeedForward);
-//         create_weight(name_gen(ffn, OperationType::LayerNorm, ParameterType::Weight),
-//                       {_config.model_n_embd});
-//         create_weight(name_gen(ffn, OperationType::LayerNorm, ParameterType::Bias),
-//                       {_config.model_n_embd});
-//         create_weight(name_gen(ffn, OperationType::FullyConnected1, ParameterType::Weight),
-//                       {_config.model_n_embd, 4 * _config.model_n_embd});
-//         create_weight(name_gen(ffn, OperationType::FullyConnected1, ParameterType::Bias),
-//                       {4 * _config.model_n_embd});
-//         create_weight(name_gen(ffn, OperationType::FullyConnected2, ParameterType::Weight),
-//                       {4 * _config.model_n_embd, _config.model_n_embd});
-//         create_weight(name_gen(ffn, OperationType::FullyConnected2, ParameterType::Bias),
-//                       {_config.model_n_embd});
-//     }
-//     // LM head는 encoder, decoder 모두 GEMV
-//     create_weight(name_gen(OperationType::LmHead, ParameterType::Weight),
-//                   {_config.model_n_embd, _config.model_vocab_size});
-
-//     // buffer의 base addr을 정하기 위해 weight의 size를 미리 계산
-//     _wgt_size = 0;
-//     for (auto const &[tensor_id, tensor] : _tensor_map) {
-//         _wgt_size += tensor->get_size();
-//         // spdlog::info("{}: {}", tensor->get_name(), tensor->get_size());
-//     }
-//     spdlog::info("Total weight size: {}", _wgt_size);
-// }
-
-// std::vector<std::shared_ptr<Tensor>> Model::get_param(int layer, std::string block_type,
-//                                                       std::string operation_type) {
-//     auto query = name_gen(LAYER(layer), block_type, operation_type);
-//     auto weight = find_tensor(name_gen(query, ParameterType::Weight));
-//     auto bias = find_tensor(name_gen(query, ParameterType::Bias));
-//     return {weight, bias};
-// }
-
-// todo: load from real address (requests)
 std::shared_ptr<Tensor> Model::load_cache(uint32_t layer, std::string type) {
     std::vector<uint32_t> shape;
     if (type == "key") {
@@ -330,6 +270,6 @@ bool Model::check_exist_in_executable(uint32_t op_id) {
 uint64_t Model::get_weight_size() { return _wgt_size; }
 
 addr_type Model::get_weight_top_addr() {
-    // wgt_size를 align한 뒤, alignment를 더해준다.
+    // after aligning wgt_size, add alignment
     return AddressConfig::align(_wgt_size) + AddressConfig::alignment;
 }

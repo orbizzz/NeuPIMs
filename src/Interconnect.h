@@ -78,8 +78,8 @@ class SimpleInterconnect : public Interconnect {
     std::vector<std::queue<Entity>> _in_buffers;           // buffer for (Module -> ICNT)
     std::vector<bool> _busy_node;
 
-    // memory request queue 분리
-    bool _mem_sa_q_turn;  // 번갈아서 queue1, queue2를 보기 위함
+    // memory request queue
+    bool _mem_sa_q_turn; // for checking queue1, queue2 in turn
     std::vector<std::queue<MemoryAccess *>> _mem_req_queue1;
     std::vector<std::queue<MemoryAccess *>> _mem_req_queue2;
 };

@@ -66,7 +66,7 @@ void ModelProgram::init_program() {
 
     /* only Multi-head attention layer */
     else {
-        // Q, K, V는 전부 다 batching 해서 사용
+        // all Q, K, V are batched
 
         spdlog::info(">>> Initialize Model Program <<<");
         Ptr<NPUTensor> query;
