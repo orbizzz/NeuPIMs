@@ -1,6 +1,6 @@
 # NeuPIMs Simulator
 
-This is NeuPIMs cycle-accurate simulator. We integrate NPU simulator and PIM simulator to implement NeuPIMs simulator.
+This is NeuPIMs cycle-accurate simulator. We integrate open-source [NPU simulator](https://github.com/PSAL-POSTECH/ONNXim) and PIM simulator to implement NeuPIMs simulator.
 
 ### Publication
 
@@ -44,7 +44,7 @@ run docker image
 
 ## method 2 (Mannual)
 
-### Instrallation
+### Installation
 
 ```
 $ git clone https://github.com/casys-kaist/NeuPIMs.git
