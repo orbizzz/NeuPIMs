@@ -1,13 +1,22 @@
 cd build; make -j; cd ..;
 
 # config file
+# npu config
 config=./configs/systolic_ws_128x128_dev.json
-mem_config=../neupims_configs/memory_configs/dram.json
-# mem_config=./neupims_configs/memory_configs/neupims.json
-cli_config=../neupims_configs/client_configs/share-gpt2-bs256-ms13B-tp4-rr-0.csv
-# model_config=./neupims_configs/model_configs/gpt2_md_layer_1.json
-model_config=../neupims_configs/model_configs/gpt3-13B.json
-sys_config=../neupims_configs/system_configs/npu_fusion.json
+
+# memory config
+mem_config=./neupims_configs/memory_configs/dram.json
+
+# client config
+# cli_config="./neupims_configs/client_configs/clb/share-gpt2-bs512-ms7B-tp4-clb-0.csv"
+cli_config="./neupims_configs/client_configs/rr/share-gpt2-bs512-ms7B-tp4-rr-0.csv"
+
+# model config
+model_config=./neupims_configs/model_configs/gpt3-7B.json
+
+# sys config
+sys_config=./neupims_configs/system_configs/npu_fusion.json
+
 
 # log file
 LOG_LEVEL=info

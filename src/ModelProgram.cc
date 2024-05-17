@@ -66,8 +66,8 @@ void ModelProgram::init_program() {
         spdlog::info("*** K_cache.size(num_layers): {}", _breq->_reqs[0]->K_cache.size());
 
         for (int i = 0; i < Config::global_config.model_n_layer; ++i) {
-            uint32_t num_heads = Config::global_config.model_n_head;
-            uint32_t dk = Config::global_config.model_n_embd / num_heads;  // 64;
+            uint32_t num_heads = Config::global_config.model_n_head / Config::global_config.n_tp;
+            uint32_t dk = Config::global_config.model_n_embd / Config::global_config.model_n_head;  // 64;
 
             std::vector<Ptr<BTensor>> querys;
             std::vector<Ptr<BTensor>> keys;
