@@ -9,8 +9,8 @@ config=./configs/systolic_ws_128x128_dev.json
 mem_config=./neupims_configs/memory_configs/newton-like.json
 
 # client config directory
-cli_config_dir="./neupims_configs/client_configs/clb"
-# cli_config_dir="./neupims_configs/client_configs/rr"
+# cli_config_dir="./neupims_configs/client_configs/clb"
+cli_config_dir="./neupims_configs/client_configs/rr"
 
 # model config
 model_config=./neupims_configs/model_configs/gpt3-7B.json
