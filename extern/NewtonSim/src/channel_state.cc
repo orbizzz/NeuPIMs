@@ -83,14 +83,14 @@ void ChannelState::RankNeedRefresh(int rank, bool need) {
         refresh_q_.emplace_back(CommandType::REFRESH, addr, -1);
     } else {
         // Remove corresponding Rank target refresh command while rotating refresh_queue        for
-        // (auto it = refresh_q_.begin(); it != refresh_q_.end(); it++) {
-        if (it->Rank() == rank) {
-            refresh_q_.erase(it);
-            break;
+        for (auto it = refresh_q_.begin(); it != refresh_q_.end(); it++) {
+            if (it->Rank() == rank) {
+                refresh_q_.erase(it);
+                break;
+            }
         }
     }
-}
-return;
+    return;
 }
 
 bool ChannelState::IsOpenTargetBanks(const Command &cmd) {
