@@ -40,7 +40,7 @@ Simulator::Simulator(SimulationConfig config) : _config(config), _core_cycles(0)
     _n_cores = config.num_cores;
     _n_memories = config.dram_channels;
     for (int core_index = 0; core_index < _n_cores; core_index++) {
-        assert(config.sub_batch_mode);
+        // assert(config.sub_batch_mode);
         spdlog::info("initializing NeuPIM SystolicWS cores.");
         _cores[core_index] = std::make_unique<NeuPIMSystolicWS>(core_index, _config);
         // if (config.sub_batch_mode) {

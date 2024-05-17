@@ -1,0 +1,6 @@
+{
+    "request_dataset_path": "./datasets/qa-length/nq_dev_data.csv",
+    "request_input_seq_len": 1024,
+    "request_interval": 0,
+    "request_total_cnt": 32
+}
